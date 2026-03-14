@@ -10,11 +10,7 @@ const suiClient = new SuiGrpcClient({
   baseUrl: 'https://fullnode.testnet.sui.io:443',
 });
 
-// CHANGE THIS:
-// 1) run once with MODE = "stake"
-// 2) wait a little over 1 hour
-// 3) change to MODE = "claim" and run again
-const MODE: "stake" | "claim" = "stake";
+const MODE: "stake" | "claim" = "claim";
 
 const PACKAGE_ID = "0x936313e502e9cbf6e7a04fe2aeb4c60bc0acd69729acc7a19921b33bebf72d03";
 const STAKING_POOL_ID = "0x9cd5b5fe69a62761859536720b9b07c48a1e43b95d8c291855d9fc6779a3b494";
@@ -77,7 +73,7 @@ function buildStakeAmounts(): bigint[] {
 
   const owned = await suiClient.core.listOwnedObjects({
     owner,
-    limit: 500,
+    limit: 1000,
   });
 
   const receiptObjects = (owned.objects || []).filter(
@@ -90,11 +86,16 @@ function buildStakeAmounts(): bigint[] {
     );
   }
 
+  // Use the oldest receipts first so we don't accidentally pick the newest batch.
+  receiptObjects.sort((a: any, b: any) => Number(a.version) - Number(b.version));
+  const chosenReceipts = receiptObjects.slice(0, NUM_RECEIPTS);
+
   console.log(`Found ${receiptObjects.length} receipts`);
+  console.log(`Using oldest ${chosenReceipts.length} receipts`);
 
   const tx = new Transaction();
 
-  const updatedReceipts = receiptObjects.slice(0, NUM_RECEIPTS).map((obj: any) =>
+  const updatedReceipts = chosenReceipts.map((obj: any) =>
     tx.moveCall({
       target: `${PACKAGE_ID}::staking::update_receipt`,
       arguments: [

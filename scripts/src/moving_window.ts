@@ -13,15 +13,18 @@ const suiClient = new SuiGrpcClient({
 (async () => {
   const PACKAGE_ID = "0x936313e502e9cbf6e7a04fe2aeb4c60bc0acd69729acc7a19921b33bebf72d03";
   const CLOCK_OBJECT_ID = "0x6";
+  const owner = keypair.toSuiAddress();
 
   const tx = new Transaction();
 
-  tx.moveCall({
+  const flag = tx.moveCall({
     target: `${PACKAGE_ID}::moving_window::extract_flag`,
     arguments: [tx.object(CLOCK_OBJECT_ID)],
   });
 
-  console.log("Sending transaction to extract flag...");
+  tx.transferObjects([flag], tx.pure.address(owner));
+
+  console.log("Sending moving window transaction...");
 
   const result = await suiClient.signAndExecuteTransaction({
     signer: keypair,
